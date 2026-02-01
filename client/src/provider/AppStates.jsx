@@ -1,4 +1,4 @@
-import { createContext, useEffect, useState } from "react";
+import { createContext, useEffect, useState, useRef } from "react";
 import {
   Circle,
   Line,
@@ -44,7 +44,12 @@ export function AppContextProvider({ children }) {
   const [session, setSession] = useState(null);
   const [selectedElement, setSelectedElement] = useState(null);
   const [selectedElements, setSelectedElements] = useState([]);
-  const [selectionBounds, setSelectionBounds] = useState(null);  const [elements, setElements, undo, redo, history, historyIndex] = useHistory(
+  const [selectionBounds, setSelectionBounds] = useState(null);
+
+  // Track if we've already loaded the drawing for this session
+  const loadedSessionRef = useRef(null);
+
+  const [elements, setElements, undo, redo, history, historyIndex] = useHistory(
     initialElements,
     session
   );
@@ -147,16 +152,27 @@ export function AppContextProvider({ children }) {
   // Load existing drawing when user logs in or joins a session
   useEffect(() => {
     const loadExistingDrawing = async () => {
+      const sessionToLoad = session || `personal_${user._id}`;
+      
+      // Check if we've already loaded this session
+      if (loadedSessionRef.current === sessionToLoad) {
+        return;
+      }
+      
       if (user && elements && Array.isArray(elements) && elements.length === 0) {
         try {
-          const sessionToLoad = session || `personal_${user._id}`; // Load personal session for solo work
+          console.log('[AppStates] Attempting to load drawing for session:', sessionToLoad);
           const drawing = await drawingService.getDrawing(sessionToLoad);
           if (drawing && drawing.data && Array.isArray(drawing.data) && drawing.data.length > 0) {
             console.log('[AppStates] Loading existing drawing from database for session:', sessionToLoad);
             setElements(drawing.data);
           }
+          // Mark this session as loaded (whether we found data or not)
+          loadedSessionRef.current = sessionToLoad;
         } catch (error) {
           console.error('[AppStates] Error loading existing drawing:', error);
+          // Mark as loaded even on error to prevent retry loops
+          loadedSessionRef.current = sessionToLoad;
           // Continue with empty canvas if loading fails
         }
       }
@@ -166,7 +182,7 @@ export function AppContextProvider({ children }) {
     if (user) {
       loadExistingDrawing();
     }
-  }, [user, session, elements.length, setElements]);
+  }, [user, session, setElements]);
 
   // Smooth zoom animation function
   const animateZoom = (targetScale, targetTranslate) => {
