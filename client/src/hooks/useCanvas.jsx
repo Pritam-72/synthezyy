@@ -665,7 +665,10 @@ useEffect(() => {
       }
 
       const element = elements.at(-1); // Get the current element being drawn
-      if (!element) return; // Should not happen if isDrawing is true
+      if (!element) {
+        console.warn('[Canvas] No element found during draw action');
+        return; // Exit if no element exists
+      }
       const { id } = element;
       
       if (selectedTool === "draw" && isDrawing) {

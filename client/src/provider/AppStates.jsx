@@ -161,12 +161,19 @@ export function AppContextProvider({ children }) {
         return;
       }
       
+      // Only load if we have no elements (fresh start)
+      if (elements && elements.length > 0) {
+        console.log('[AppStates] Skipping load - elements already exist:', elements.length);
+        loadedSessionRef.current = sessionToLoad;
+        return;
+      }
+      
       try {
         console.log('[AppStates] Attempting to load drawing for session:', sessionToLoad);
         const drawing = await drawingService.getDrawing(sessionToLoad);
         if (drawing && drawing.data && Array.isArray(drawing.data) && drawing.data.length > 0) {
           console.log('[AppStates] Loading existing drawing from database for session:', sessionToLoad);
-          setElements(drawing.data);
+          setElements(drawing.data, true); // Use overwrite mode to avoid triggering undo/redo
         }
         // Mark this session as loaded (whether we found data or not)
         loadedSessionRef.current = sessionToLoad;
@@ -178,11 +185,9 @@ export function AppContextProvider({ children }) {
       }
     };
 
-    // Load drawing when user is authenticated
-    if (user) {
-      loadExistingDrawing();
-    }
-  }, [user, session, setElements]);
+    // Load drawing when user is authenticated - run once per session
+    loadExistingDrawing();
+  }, [user?._id, session]); // Only depend on user ID and session, not elements or setElements
 
   // Smooth zoom animation function
   const animateZoom = (targetScale, targetTranslate) => {
