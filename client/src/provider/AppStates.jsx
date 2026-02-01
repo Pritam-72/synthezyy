@@ -152,6 +152,8 @@ export function AppContextProvider({ children }) {
   // Load existing drawing when user logs in or joins a session
   useEffect(() => {
     const loadExistingDrawing = async () => {
+      if (!user) return;
+      
       const sessionToLoad = session || `personal_${user._id}`;
       
       // Check if we've already loaded this session
@@ -159,22 +161,20 @@ export function AppContextProvider({ children }) {
         return;
       }
       
-      if (user && elements && Array.isArray(elements) && elements.length === 0) {
-        try {
-          console.log('[AppStates] Attempting to load drawing for session:', sessionToLoad);
-          const drawing = await drawingService.getDrawing(sessionToLoad);
-          if (drawing && drawing.data && Array.isArray(drawing.data) && drawing.data.length > 0) {
-            console.log('[AppStates] Loading existing drawing from database for session:', sessionToLoad);
-            setElements(drawing.data);
-          }
-          // Mark this session as loaded (whether we found data or not)
-          loadedSessionRef.current = sessionToLoad;
-        } catch (error) {
-          console.error('[AppStates] Error loading existing drawing:', error);
-          // Mark as loaded even on error to prevent retry loops
-          loadedSessionRef.current = sessionToLoad;
-          // Continue with empty canvas if loading fails
+      try {
+        console.log('[AppStates] Attempting to load drawing for session:', sessionToLoad);
+        const drawing = await drawingService.getDrawing(sessionToLoad);
+        if (drawing && drawing.data && Array.isArray(drawing.data) && drawing.data.length > 0) {
+          console.log('[AppStates] Loading existing drawing from database for session:', sessionToLoad);
+          setElements(drawing.data);
         }
+        // Mark this session as loaded (whether we found data or not)
+        loadedSessionRef.current = sessionToLoad;
+      } catch (error) {
+        console.error('[AppStates] Error loading existing drawing:', error);
+        // Mark as loaded even on error to prevent retry loops
+        loadedSessionRef.current = sessionToLoad;
+        // Continue with empty canvas if loading fails
       }
     };
 
